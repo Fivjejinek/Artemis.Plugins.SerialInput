@@ -15,6 +15,4 @@ public class Bootstrapper : PluginBootstrapper
     {
         plugin.Register<ArduinoPinsModule>();
     }
-
-    public override void OnPluginDisabled(Plugin plugin) { }
 }
