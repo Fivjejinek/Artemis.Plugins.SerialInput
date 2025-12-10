@@ -9,7 +9,8 @@ public class Bootstrapper : PluginBootstrapper
 {
     public override void OnPluginLoaded(Plugin plugin)
     {
-        plugin.ConfigurationDialog = new PluginConfigurationDialog<SerialInputConfigurationView, SerialInputConfigurationViewModel>();
+        // Only pass the View type here
+        plugin.ConfigurationDialog = new PluginConfigurationDialog<SerialInputConfigurationView>();
     }
 
     public override void OnPluginEnabled(Plugin plugin)
