@@ -1,11 +1,8 @@
 {
   "Guid": "6BE0AFFA-864D-4113-AF53-AF98BB93F0A6",
   "Name": "Arduino Pin States",
-  "Description": "Reads digital pin states from an Arduino over serial and exposes them as an Artemis DataModel.",
+  "Description": "Reads digital and analog pin states from Arduino Uno or Mega over serial.",
   "Author": "Andrew",
-  "Website": "",
-  "Repository": "",
-  "Icon": "QuestionMark",
   "Version": "1.0.0.0",
   "Main": "Artemis.Plugins.SerialInput.dll",
   "AutoEnableProperties": true,
