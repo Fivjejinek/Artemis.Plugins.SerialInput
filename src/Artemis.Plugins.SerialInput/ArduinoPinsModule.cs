@@ -19,11 +19,11 @@ namespace Artemis.Plugins.SerialInput
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            // Create or get settings via PluginSettings (this matches your working example)
+            // Create or get settings via PluginSettings
             _comPortSetting = pluginSettings.GetSetting("ComPort", "COM3");
             _baudRateSetting = pluginSettings.GetSetting("BaudRate", 9600);
 
-            // Optional: react to setting changes
+            // React to setting changes
             _comPortSetting.PropertyChanged += (_, __) => RestartSerial();
             _baudRateSetting.PropertyChanged += (_, __) => RestartSerial();
         }
@@ -33,23 +33,11 @@ namespace Artemis.Plugins.SerialInput
         public override void Enable()
         {
             OpenSerial();
-            // Example: poll every frame or use timed updates if preferred
         }
 
         public override void Disable()
         {
-            try
-            {
-                _serial?.Close();
-            }
-            catch (Exception e)
-            {
-                _logger?.Error(e.ToString());
-            }
-            finally
-            {
-                _serial = null;
-            }
+            CloseSerialIfOpen();
         }
 
         public override void Update(double deltaTime)
@@ -134,7 +122,6 @@ namespace Artemis.Plugins.SerialInput
 
         private void RestartSerial()
         {
-            // Called when settings change
             CloseSerialIfOpen();
             OpenSerial();
         }
