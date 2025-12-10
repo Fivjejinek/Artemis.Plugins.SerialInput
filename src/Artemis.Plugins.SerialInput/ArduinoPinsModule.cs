@@ -1,21 +1,25 @@
 using Artemis.Core.Modules;
+using Artemis.Core.Modules.Interfaces;
+using System.Collections.Generic;
 using System.IO.Ports;
 
-namespace ArduinoPinsPlugin
+namespace Artemis.Plugins.SerialInput
 {
     public class ArduinoPinsModule : Module<ArduinoPinsDataModel>
     {
         private SerialPort _serial;
-        private readonly ArduinoPinsSettings _settings;
+        private readonly string _comPort;
+        private readonly int _baudRate;
 
-        public ArduinoPinsModule(ArduinoPinsSettings settings)
+        public ArduinoPinsModule(string comPort, int baudRate)
         {
-            _settings = settings;
+            _comPort = comPort;
+            _baudRate = baudRate;
         }
 
         public override void Enable()
         {
-            _serial = new SerialPort(_settings.ComPort, _settings.BaudRate);
+            _serial = new SerialPort(_comPort, _baudRate);
             _serial.Open();
         }
 
@@ -30,7 +34,7 @@ namespace ArduinoPinsPlugin
             {
                 try
                 {
-                    string line = _serial.ReadLine();
+                    string line = _serial.ReadLine(); // Example: "2:1,3:0,4:1"
                     var parts = line.Split(',');
 
                     foreach (var part in parts)
@@ -61,5 +65,8 @@ namespace ArduinoPinsPlugin
                 catch { }
             }
         }
+
+        // Required override
+        public override List<IModuleActivationRequirement> ActivationRequirements => new();
     }
 }
