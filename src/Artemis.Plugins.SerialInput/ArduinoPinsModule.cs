@@ -1,5 +1,4 @@
 using Artemis.Core.Modules;
-using Artemis.Core.Modules.Interfaces;
 using System.Collections.Generic;
 using System.IO.Ports;
 
@@ -66,7 +65,6 @@ namespace Artemis.Plugins.SerialInput
             }
         }
 
-        // Required override
         public override List<IModuleActivationRequirement> ActivationRequirements => new();
     }
 }
