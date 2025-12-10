@@ -10,13 +10,15 @@ namespace Artemis.Plugins.SerialInput
 
         public override void OnPluginLoaded(Plugin plugin)
         {
-            _comPort = plugin.GetSetting("ComPort", "COM3");
-            _baudRate = plugin.GetSetting("BaudRate", 9600);
+            // Create settings directly from the plugin
+            _comPort = plugin.Settings.GetSetting("ComPort", "COM3");
+            _baudRate = plugin.Settings.GetSetting("BaudRate", 9600);
         }
 
         public override void OnPluginEnabled(Plugin plugin)
         {
-            plugin.RegisterModule(new ArduinoPinsModule(_comPort.Value, _baudRate.Value));
+            // Register your module with the plugin
+            plugin.Modules.RegisterModule(() => new ArduinoPinsModule(_comPort.Value, _baudRate.Value));
         }
 
         public override void OnPluginDisabled(Plugin plugin)
