@@ -11,8 +11,6 @@ namespace Artemis.Plugins.SerialInput
 
         public override void OnPluginLoaded(Plugin plugin)
         {
-            // Run diagnostics once when the plugin loads
-            PluginInspector.DumpPluginApi(plugin);
         }
 
         public override void OnPluginEnabled(Plugin plugin)
