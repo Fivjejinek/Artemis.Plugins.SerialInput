@@ -1,14 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <!-- Change to net9.0 if your Artemis host runs on .NET 9 -->
+    <TargetFramework>net8.0</TargetFramework>
     <Platforms>x64</Platforms>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ArtemisRGB.Core" Version="1.2024.303.4" />
-    <PackageReference Include="ArtemisRGB.UI.Shared" IncludeAssets="compile;build;buildTransitive" Version="1.2024.303.4" />
+    <!-- Floating versions pick the latest available matching package on restore -->
+    <PackageReference Include="ArtemisRGB.Core" Version="*" />
+    <PackageReference Include="ArtemisRGB.UI.Shared" Version="*" />
     <PackageReference Include="System.IO.Ports" Version="7.0.0" />
   </ItemGroup>
 
@@ -19,4 +22,20 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
+
+  <!-- Optional: produce a single-file artifact for easier distribution (uncomment if desired)
+  <PropertyGroup>
+    <PublishSingleFile>true</PublishSingleFile>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier> 
+    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+  -->
+
+  <!-- CI recommendation: replace floating versions with pinned versions for reproducible builds
+  <ItemGroup>
+    <PackageReference Include="ArtemisRGB.Core" Version="1.2024.303.4" />
+    <PackageReference Include="ArtemisRGB.UI.Shared" Version="1.2024.303.4" />
+    <PackageReference Include="System.IO.Ports" Version="7.0.0" />
+  </ItemGroup>
+  -->
 </Project>
