@@ -12,7 +12,6 @@ namespace Artemis.Plugins.SerialInput
         public override void OnPluginEnabled(Plugin plugin)
         {
             // Register the module with the plugin host.
-            // Use Register<T>() for the latest Artemis; if your host requires RegisterModule<T>(), replace the method name.
             plugin.Register<ArduinoPinsModule>();
         }
 
