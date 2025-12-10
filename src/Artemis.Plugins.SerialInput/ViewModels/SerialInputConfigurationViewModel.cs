@@ -1,17 +1,31 @@
 using Artemis.Core;
 using Artemis.UI.Shared;
 
-namespace Artemis.Plugins.SerialInput.ViewModels;
-
-public class SerialInputConfigurationViewModel : PluginConfigurationViewModel
+namespace Artemis.Plugins.SerialInput.ViewModels
 {
-    public PluginSetting<string> ComPort { get; }
-    public PluginSetting<int> BaudRate { get; }
-
-    public SerialInputConfigurationViewModel(Plugin plugin, PluginSettings settings) 
-        : base(plugin)
+    public class SerialInputConfigurationViewModel : PluginConfigurationViewModel
     {
-        ComPort = settings.GetSetting("ComPort", "COM3");
-        BaudRate = settings.GetSetting("BaudRate", 9600);
+        public PluginSetting<string> Board { get; }
+        public PluginSetting<string> ComPort { get; }
+        public PluginSetting<int> BaudRate { get; }
+
+        public string[] BoardOptions { get; } = new[] { "Uno", "Mega" };
+
+        public SerialInputConfigurationViewModel(Plugin plugin, PluginSettings settings)
+            : base(plugin)
+        {
+            Board = settings.GetSetting("Board", "Uno");
+            ComPort = settings.GetSetting("ComPort", "COM3");
+            BaudRate = settings.GetSetting("BaudRate", 9600);
+        }
+
+        public override void OnSave()
+        {
+            // Settings are persisted automatically
+        }
+
+        public override void OnCancel()
+        {
+        }
     }
 }
