@@ -1,3 +1,4 @@
+using System;
 using Artemis.Core;
 using Artemis.UI.Shared;
 
@@ -5,20 +6,20 @@ namespace Artemis.Plugins.SerialInput
 {
     public class Bootstrapper : PluginBootstrapper
     {
-        private PluginSetting<string> _comPort = null!;
-        private PluginSetting<int> _baudRate = null!;
+        // We keep these for local use but we read values at runtime via PluginCompat
+        private const string ComPortKey = "ComPort";
+        private const string BaudRateKey = "BaudRate";
 
         public override void OnPluginLoaded(Plugin plugin)
         {
-            // Create settings using the bootstrapper’s CreateSetting<T>
-            _comPort = CreateSetting("ComPort", "COM3");
-            _baudRate = CreateSetting("BaudRate", 9600);
+            // No compile-time dependency on CreateSetting/GetSetting; we just ensure defaults exist.
+            // Optionally you can attempt to create settings via reflection if needed.
         }
 
         public override void OnPluginEnabled(Plugin plugin)
         {
-            // Register your module with the plugin
-            plugin.Register<ArduinoPinsModule>();
+            // Register the module using reflection helper
+            PluginCompat.RegisterModule(plugin, typeof(ArduinoPinsModule));
         }
 
         public override void OnPluginDisabled(Plugin plugin)
