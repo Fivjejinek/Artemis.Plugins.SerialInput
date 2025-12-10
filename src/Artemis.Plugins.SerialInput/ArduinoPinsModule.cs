@@ -1,5 +1,4 @@
 using Artemis.Core.Modules;
-using System;
 using System.Collections.Generic;
 using System.IO.Ports;
 
@@ -11,33 +10,18 @@ namespace Artemis.Plugins.SerialInput
 
         public override void Enable()
         {
-            // Read settings via reflection helper with safe defaults
-            string comPort = PluginCompat.GetSettingValue(Plugin, "ComPort", "COM3");
-            int baudRate = PluginCompat.GetSettingValue(Plugin, "BaudRate", 9600);
+            // Read settings via Plugin API available at runtime
+            string comPort = Plugin.GetSetting<string>("ComPort").Value;
+            int baudRate = Plugin.GetSetting<int>("BaudRate").Value;
 
-            try
-            {
-                _serial = new SerialPort(comPort, baudRate);
-                _serial.Open();
-            }
-            catch (Exception ex)
-            {
-                // Log or swallow depending on your logging setup; avoid crashing the module
-                // Example: Console.WriteLine($"Serial open failed: {ex}");
-            }
+            _serial = new SerialPort(comPort, baudRate);
+            _serial.Open();
         }
 
         public override void Disable()
         {
-            try
-            {
-                _serial?.Close();
-            }
-            catch { }
-            finally
-            {
-                _serial = null;
-            }
+            _serial?.Close();
+            _serial = null;
         }
 
         public override void Update(double deltaTime)
@@ -54,7 +38,6 @@ namespace Artemis.Plugins.SerialInput
                 {
                     var kv = part.Split(':');
                     if (kv.Length != 2) continue;
-
                     if (!int.TryParse(kv[0], out int pin)) continue;
                     bool state = kv[1] == "1";
 
