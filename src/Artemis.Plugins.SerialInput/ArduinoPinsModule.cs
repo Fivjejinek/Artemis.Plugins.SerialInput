@@ -1,27 +1,55 @@
-using Artemis.Core.Modules;
+using System;
 using System.Collections.Generic;
 using System.IO.Ports;
+using Artemis.Core;
+using Artemis.Core.Modules;
+using Serilog;
 
 namespace Artemis.Plugins.SerialInput
 {
     public class ArduinoPinsModule : Module<ArduinoPinsDataModel>
     {
+        private readonly PluginSetting<string> _comPortSetting;
+        private readonly PluginSetting<int> _baudRateSetting;
+        private readonly ILogger _logger;
         private SerialPort? _serial;
+
+        // Constructor injection: PluginSettings and ILogger are provided by Artemis DI
+        public ArduinoPinsModule(PluginSettings pluginSettings, ILogger logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            // Create or get settings via PluginSettings (this matches your working example)
+            _comPortSetting = pluginSettings.GetSetting("ComPort", "COM3");
+            _baudRateSetting = pluginSettings.GetSetting("BaudRate", 9600);
+
+            // Optional: react to setting changes
+            _comPortSetting.PropertyChanged += (_, __) => RestartSerial();
+            _baudRateSetting.PropertyChanged += (_, __) => RestartSerial();
+        }
+
+        public override List<IModuleActivationRequirement> ActivationRequirements => new();
 
         public override void Enable()
         {
-            // Read settings via Plugin API available at runtime
-            string comPort = Plugin.GetSetting<string>("ComPort").Value;
-            int baudRate = Plugin.GetSetting<int>("BaudRate").Value;
-
-            _serial = new SerialPort(comPort, baudRate);
-            _serial.Open();
+            OpenSerial();
+            // Example: poll every frame or use timed updates if preferred
         }
 
         public override void Disable()
         {
-            _serial?.Close();
-            _serial = null;
+            try
+            {
+                _serial?.Close();
+            }
+            catch (Exception e)
+            {
+                _logger?.Error(e.ToString());
+            }
+            finally
+            {
+                _serial = null;
+            }
         }
 
         public override void Update(double deltaTime)
@@ -58,12 +86,57 @@ namespace Artemis.Plugins.SerialInput
                     }
                 }
             }
-            catch
+            catch (Exception e)
             {
-                // ignore malformed input
+                _logger?.Error(e.ToString());
             }
         }
 
-        public override List<IModuleActivationRequirement> ActivationRequirements => new();
+        private void OpenSerial()
+        {
+            try
+            {
+                CloseSerialIfOpen();
+
+                string comPort = _comPortSetting.Value ?? "COM3";
+                int baudRate = _baudRateSetting.Value;
+
+                _serial = new SerialPort(comPort, baudRate)
+                {
+                    ReadTimeout = 500,
+                    NewLine = "\n"
+                };
+                _serial.Open();
+            }
+            catch (Exception e)
+            {
+                _logger?.Error($"Failed to open serial port: {e}");
+                _serial = null;
+            }
+        }
+
+        private void CloseSerialIfOpen()
+        {
+            try
+            {
+                if (_serial != null && _serial.IsOpen)
+                    _serial.Close();
+            }
+            catch (Exception e)
+            {
+                _logger?.Error(e.ToString());
+            }
+            finally
+            {
+                _serial = null;
+            }
+        }
+
+        private void RestartSerial()
+        {
+            // Called when settings change
+            CloseSerialIfOpen();
+            OpenSerial();
+        }
     }
 }
