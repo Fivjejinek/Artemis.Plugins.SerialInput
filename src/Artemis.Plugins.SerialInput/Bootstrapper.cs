@@ -1,22 +1,21 @@
 using Artemis.Core;
 using Artemis.UI.Shared;
 
-namespace Artemis.Plugins.SerialInput;
-
-public class Bootstrapper : PluginBootstrapper
+namespace ArduinoPinsPlugin
 {
-    public override void OnPluginLoaded(Plugin plugin)
+    public class Bootstrapper : PluginBootstrapper
     {
-        
-    }
+        public override void OnPluginLoaded(Plugin plugin)
+        {
+        }
 
-    public override void OnPluginEnabled(Plugin plugin)
-    {
-        
-    }
-    
-    public override void OnPluginDisabled(Plugin plugin)
-    {
-        
+        public override void OnPluginEnabled(Plugin plugin)
+        {
+            plugin.RegisterModule<ArduinoPinsModule>();
+        }
+
+        public override void OnPluginDisabled(Plugin plugin)
+        {
+        }
     }
 }
