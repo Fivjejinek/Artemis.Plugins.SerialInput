@@ -8,13 +8,18 @@
     <TextBlock Text="Serial Port Configuration" FontSize="18" FontWeight="Bold" />
 
     <StackPanel Orientation="Horizontal" Spacing="10">
+      <TextBlock Text="Board:" Width="100" VerticalAlignment="Center"/>
+      <ComboBox ItemsSource="{Binding BoardOptions}" SelectedItem="{Binding Board.Value}" Width="200"/>
+    </StackPanel>
+
+    <StackPanel Orientation="Horizontal" Spacing="10">
       <TextBlock Text="COM Port:" Width="100" VerticalAlignment="Center"/>
       <TextBox Text="{Binding ComPort.Value}" Width="200"/>
     </StackPanel>
 
     <StackPanel Orientation="Horizontal" Spacing="10">
       <TextBlock Text="Baud Rate:" Width="100" VerticalAlignment="Center"/>
-      <NumericUpDown Value="{Binding BaudRate.Value}" Minimum="1200" Maximum="115200" Width="200"/>
+      <NumericUpDown Value="{Binding BaudRate.Value}" Minimum="1200" Maximum="115200" Increment="600" Width="200"/>
     </StackPanel>
   </StackPanel>
 </UserControl>
