@@ -10,9 +10,9 @@ namespace Artemis.Plugins.SerialInput
 
         public override void Enable()
         {
-            // Read settings directly from the plugin configuration
-            string comPort = Plugin.Configuration.GetSetting("ComPort", "COM3").Value;
-            int baudRate = Plugin.Configuration.GetSetting("BaudRate", 9600).Value;
+            // Read settings directly from the bootstrapper
+            string comPort = Plugin.GetSetting<string>("ComPort").Value;
+            int baudRate = Plugin.GetSetting<int>("BaudRate").Value;
 
             _serial = new SerialPort(comPort, baudRate);
             _serial.Open();
@@ -65,7 +65,6 @@ namespace Artemis.Plugins.SerialInput
             }
         }
 
-        // Required override for Artemis modules
         public override List<IModuleActivationRequirement> ActivationRequirements => new();
     }
 }
