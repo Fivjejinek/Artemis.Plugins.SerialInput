@@ -6,11 +6,16 @@ namespace ArduinoPinsPlugin
     public class ArduinoPinsModule : Module<ArduinoPinsDataModel>
     {
         private SerialPort _serial;
+        private readonly ArduinoPinsSettings _settings;
+
+        public ArduinoPinsModule(ArduinoPinsSettings settings)
+        {
+            _settings = settings;
+        }
 
         public override void Enable()
         {
-            // Adjust COM port and baud rate to match your Arduino
-            _serial = new SerialPort("COM3", 9600);
+            _serial = new SerialPort(_settings.ComPort, _settings.BaudRate);
             _serial.Open();
         }
 
@@ -25,7 +30,7 @@ namespace ArduinoPinsPlugin
             {
                 try
                 {
-                    string line = _serial.ReadLine(); // Example: "2:1,3:0,4:1"
+                    string line = _serial.ReadLine();
                     var parts = line.Split(',');
 
                     foreach (var part in parts)
@@ -53,7 +58,7 @@ namespace ArduinoPinsPlugin
                         }
                     }
                 }
-                catch { /* ignore malformed lines */ }
+                catch { }
             }
         }
     }
