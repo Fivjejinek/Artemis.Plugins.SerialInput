@@ -18,14 +18,5 @@ namespace Artemis.Plugins.SerialInput.ViewModels
             ComPort = settings.GetSetting("ComPort", "COM3");
             BaudRate = settings.GetSetting("BaudRate", 9600);
         }
-
-        public override void OnSave()
-        {
-            // Settings are persisted automatically
-        }
-
-        public override void OnCancel()
-        {
-        }
     }
 }
