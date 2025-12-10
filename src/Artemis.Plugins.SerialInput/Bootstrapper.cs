@@ -7,6 +7,8 @@ namespace ArduinoPinsPlugin
     {
         public override void OnPluginLoaded(Plugin plugin)
         {
+            // Define settings with defaults
+            plugin.ConfigurationDialog = new PluginConfigurationDialog<ArduinoPinsSettings>();
         }
 
         public override void OnPluginEnabled(Plugin plugin)
