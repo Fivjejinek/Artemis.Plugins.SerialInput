@@ -6,25 +6,22 @@ namespace Artemis.Plugins.SerialInput
 {
     public class ArduinoPinsModule : Module<ArduinoPinsDataModel>
     {
-        private SerialPort _serial;
-        private readonly string _comPort;
-        private readonly int _baudRate;
-
-        public ArduinoPinsModule(string comPort, int baudRate)
-        {
-            _comPort = comPort;
-            _baudRate = baudRate;
-        }
+        private SerialPort? _serial;
 
         public override void Enable()
         {
-            _serial = new SerialPort(_comPort, _baudRate);
+            // Read settings directly from the plugin configuration
+            string comPort = Plugin.Configuration.GetSetting("ComPort", "COM3").Value;
+            int baudRate = Plugin.Configuration.GetSetting("BaudRate", 9600).Value;
+
+            _serial = new SerialPort(comPort, baudRate);
             _serial.Open();
         }
 
         public override void Disable()
         {
             _serial?.Close();
+            _serial = null;
         }
 
         public override void Update(double deltaTime)
@@ -61,10 +58,14 @@ namespace Artemis.Plugins.SerialInput
                         }
                     }
                 }
-                catch { }
+                catch
+                {
+                    // swallow errors from malformed serial input
+                }
             }
         }
 
+        // Required override for Artemis modules
         public override List<IModuleActivationRequirement> ActivationRequirements => new();
     }
 }
