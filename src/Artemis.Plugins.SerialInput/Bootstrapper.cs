@@ -8,7 +8,6 @@ public class Bootstrapper : PluginBootstrapper
 {
     public override void OnPluginLoaded(Plugin plugin)
     {
-        // Register the configuration dialog with the ViewModel type
         plugin.ConfigurationDialog = new PluginConfigurationDialog<SerialInputConfigurationViewModel>();
     }
 
