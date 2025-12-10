@@ -10,7 +10,7 @@ namespace Artemis.Plugins.SerialInput
 
         public override void OnPluginLoaded(Plugin plugin)
         {
-            // Create settings using PluginBootstrapper API
+            // Create settings using PluginBootstrapper API (latest Artemis)
             _comPort = CreateSetting("ComPort", "COM3");
             _baudRate = CreateSetting("BaudRate", 9600);
         }
@@ -21,8 +21,6 @@ namespace Artemis.Plugins.SerialInput
             plugin.RegisterModule<ArduinoPinsModule>();
         }
 
-        public override void OnPluginDisabled(Plugin plugin)
-        {
-        }
+        public override void OnPluginDisabled(Plugin plugin) { }
     }
 }
