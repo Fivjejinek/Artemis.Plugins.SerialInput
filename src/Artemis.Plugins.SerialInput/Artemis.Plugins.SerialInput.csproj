@@ -1,6 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- Target the runtime that matches the latest Artemis packages (net9.0) -->
     <TargetFramework>net9.0</TargetFramework>
     <Platforms>x64</Platforms>
     <EnableDynamicLoading>true</EnableDynamicLoading>
@@ -9,10 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Floating versions resolve to the latest available matching package at restore time -->
     <PackageReference Include="ArtemisRGB.Core" Version="*" />
     <PackageReference Include="ArtemisRGB.UI.Shared" Version="*" />
     <PackageReference Include="System.IO.Ports" Version="7.0.0" />
+    <PackageReference Include="Serilog" Version="2.*" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,21 +21,4 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
-
-  <!-- Optional: uncomment to produce a RID-specific single-file publish -->
-  <!--
-  <PropertyGroup>
-    <PublishSingleFile>true</PublishSingleFile>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <SelfContained>false</SelfContained>
-  </PropertyGroup>
-  -->
-
-  <!-- CI recommendation: replace floating versions with pinned versions for reproducible builds
-  <ItemGroup>
-    <PackageReference Include="ArtemisRGB.Core" Version="1.2025.216.4" />
-    <PackageReference Include="ArtemisRGB.UI.Shared" Version="1.2025.216.4" />
-    <PackageReference Include="System.IO.Ports" Version="7.0.0" />
-  </ItemGroup>
-  -->
 </Project>
