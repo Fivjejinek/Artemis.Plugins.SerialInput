@@ -9,6 +9,7 @@ namespace Artemis.Plugins.SerialInput;
 
 public class ArduinoPinsModule : Module<ArduinoPinsDataModel>
 {
+    private readonly PluginSetting<string> _boardSetting;
     private readonly PluginSetting<string> _comPortSetting;
     private readonly PluginSetting<int> _baudRateSetting;
     private readonly ILogger _logger;
@@ -17,9 +18,11 @@ public class ArduinoPinsModule : Module<ArduinoPinsDataModel>
     public ArduinoPinsModule(PluginSettings pluginSettings, ILogger logger)
     {
         _logger = logger;
+        _boardSetting = pluginSettings.GetSetting("Board", "Uno");
         _comPortSetting = pluginSettings.GetSetting("ComPort", "COM3");
         _baudRateSetting = pluginSettings.GetSetting("BaudRate", 9600);
 
+        _boardSetting.PropertyChanged += (_, __) => RestartSerial();
         _comPortSetting.PropertyChanged += (_, __) => RestartSerial();
         _baudRateSetting.PropertyChanged += (_, __) => RestartSerial();
     }
@@ -27,7 +30,6 @@ public class ArduinoPinsModule : Module<ArduinoPinsDataModel>
     public override List<IModuleActivationRequirement> ActivationRequirements => new();
 
     public override void Enable() => OpenSerial();
-
     public override void Disable() => CloseSerialIfOpen();
 
     public override void Update(double deltaTime)
@@ -36,79 +38,46 @@ public class ArduinoPinsModule : Module<ArduinoPinsDataModel>
 
         try
         {
-            if (_serial.BytesToRead == 0) return;
-            string line = _serial.ReadLine();
-            var parts = line.Split(',');
-
-            foreach (var part in parts)
+            while (_serial.BytesToRead > 0)
             {
-                var kv = part.Split(':');
-                if (kv.Length != 2) continue;
-                if (!int.TryParse(kv[0], out int pin)) continue;
-                bool state = kv[1] == "1";
-
-                switch (pin)
+                string line = _serial.ReadLine().Trim();
+                var blocks = line.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var block in blocks)
                 {
-                    case 2: DataModel.Pin2 = state; break;
-                    case 3: DataModel.Pin3 = state; break;
-                    case 4: DataModel.Pin4 = state; break;
-                    case 5: DataModel.Pin5 = state; break;
-                    case 6: DataModel.Pin6 = state; break;
-                    case 7: DataModel.Pin7 = state; break;
-                    case 8: DataModel.Pin8 = state; break;
-                    case 9: DataModel.Pin9 = state; break;
-                    case 10: DataModel.Pin10 = state; break;
-                    case 11: DataModel.Pin11 = state; break;
-                    case 12: DataModel.Pin12 = state; break;
-                    case 13: DataModel.Pin13 = state; break;
+                    if (block.StartsWith("D:")) ParseDigital(block.Substring(2));
+                    else if (block.StartsWith("A:")) ParseAnalog(block.Substring(2));
                 }
             }
         }
         catch (Exception e)
         {
-            _logger?.Error(e.ToString());
+            _logger?.Error(e, "Serial read error");
         }
     }
 
-    private void OpenSerial()
+    private void ParseDigital(string csv)
     {
-        try
+        foreach (var p in csv.Split(',', StringSplitOptions.RemoveEmptyEntries))
         {
-            CloseSerialIfOpen();
-            _serial = new SerialPort(_comPortSetting.Value ?? "COM3", _baudRateSetting.Value)
-            {
-                ReadTimeout = 500,
-                NewLine = "\n"
-            };
-            _serial.Open();
-        }
-        catch (Exception e)
-        {
-            _logger?.Error($"Failed to open serial port: {e}");
-            _serial = null;
+            var kv = p.Split('=');
+            if (kv.Length != 2) continue;
+            if (!int.TryParse(kv[0], out int pin)) continue;
+            bool state = kv[1] == "1";
+
+            var prop = GetType().GetProperty($"Pin{pin}");
+            if (prop != null) prop.SetValue(DataModel, state);
         }
     }
 
-    private void CloseSerialIfOpen()
+    private void ParseAnalog(string csv)
     {
-        try
+        foreach (var p in csv.Split(',', StringSplitOptions.RemoveEmptyEntries))
         {
-            if (_serial?.IsOpen == true)
-                _serial.Close();
-        }
-        catch (Exception e)
-        {
-            _logger?.Error(e.ToString());
-        }
-        finally
-        {
-            _serial = null;
-        }
-    }
+            var kv = p.Split('=');
+            if (kv.Length != 2) continue;
+            if (!int.TryParse(kv[0], out int index)) continue;
+            if (!int.TryParse(kv[1], out int val)) continue;
+            val = Math.Clamp(val, 0, 1023);
 
-    private void RestartSerial()
-    {
-        CloseSerialIfOpen();
-        OpenSerial();
-    }
-}
+            var prop = GetType().GetProperty($"A{index}");
+            if (
