@@ -18,7 +18,11 @@ namespace Artemis.Plugins.SerialInput
 
         public override void OnPluginEnabled(Plugin plugin)
         {
-            // Register the module using reflection helper
+            public override void OnPluginLoaded(Plugin plugin)
+{
+    PluginInspector.DumpPluginApi(plugin);
+}
+
             PluginCompat.RegisterModule(plugin, typeof(ArduinoPinsModule));
         }
 
