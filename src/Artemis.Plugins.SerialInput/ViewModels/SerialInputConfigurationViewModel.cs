@@ -12,7 +12,7 @@ namespace Artemis.Plugins.SerialInput.ViewModels
             : base(plugin)
         {
             ComPort = settings.GetSetting("ComPort", "COM3");
-            BaudRate = settings.GetSetting("BaudRate", 9600);
+            BaudRate = settings.GetSetting("BaudRate", 115200);
         }
     }
 }
