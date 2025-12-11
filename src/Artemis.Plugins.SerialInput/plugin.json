@@ -3,7 +3,7 @@
   "Name": "Arduino Pin States",
   "Description": "Reads digital and analog pin states from Arduino Uno or Mega over serial.",
   "Author": "Fivjejinek",
-  "Version": "1.0.0.1",
+  "Version": "1.0.0.2",
   "Main": "Artemis.Plugins.SerialInput.dll",
   "AutoEnableProperties": true,
   "RequiresAdmin": false,
