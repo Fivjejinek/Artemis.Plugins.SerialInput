@@ -10,27 +10,35 @@ namespace Artemis.Plugins.SerialInput
 {
     public class ArduinoPinsModule : Module<ArduinoPinsDataModel>
     {
-        private readonly PluginSetting<string> _boardSetting;
         private readonly PluginSetting<string> _comPortSetting;
         private readonly PluginSetting<int> _baudRateSetting;
         private readonly ILogger _logger;
         private SerialPort? _serial;
+        private bool _handshakeDone = false;
+        private string? _boardType;
 
         public ArduinoPinsModule(PluginSettings pluginSettings, ILogger logger)
         {
             _logger = logger;
-            _boardSetting = pluginSettings.GetSetting("Board", "Uno");
             _comPortSetting = pluginSettings.GetSetting("ComPort", "COM3");
             _baudRateSetting = pluginSettings.GetSetting("BaudRate", 9600);
 
-            _boardSetting.PropertyChanged += (_, __) => RestartSerial();
             _comPortSetting.PropertyChanged += (_, __) => RestartSerial();
             _baudRateSetting.PropertyChanged += (_, __) => RestartSerial();
         }
 
         public override List<IModuleActivationRequirement> ActivationRequirements => new();
 
-        public override void Enable() => OpenSerial();
+        public override void Enable()
+        {
+            OpenSerial();
+            if (_serial != null && _serial.IsOpen)
+            {
+                // Ask "who are you"
+                _serial.Write(new byte[] { 0x01 }, 0, 1);
+            }
+        }
+
         public override void Disable() => CloseSerialIfOpen();
 
         public override void Update(double deltaTime)
@@ -39,8 +47,22 @@ namespace Artemis.Plugins.SerialInput
 
             try
             {
-                while (_serial.BytesToRead > 0)
+                if (!_handshakeDone && _serial.BytesToRead > 0)
                 {
+                    string response = _serial.ReadLine().Trim();
+                    if (response == "Uno" || response == "Mega")
+                    {
+                        _boardType = response;   // auto‑detected
+                        _handshakeDone = true;
+                    }
+                    return;
+                }
+
+                if (_handshakeDone)
+                {
+                    // Each frame, request new batch
+                    _serial.Write(new byte[] { 0x02 }, 0, 1);
+
                     string line = _serial.ReadLine().Trim();
                     var blocks = line.Split(';', StringSplitOptions.RemoveEmptyEntries);
                     foreach (var block in blocks)
@@ -65,7 +87,9 @@ namespace Artemis.Plugins.SerialInput
                 if (!int.TryParse(kv[0], out int pin)) continue;
                 bool state = kv[1] == "1";
 
-                // Reflectively set DataModel.PinX
+                // Skip pins 0 and 1
+                if (pin == 0 || pin == 1) continue;
+
                 PropertyInfo? prop = typeof(ArduinoPinsDataModel).GetProperty($"Pin{pin}");
                 if (prop != null)
                     prop.SetValue(DataModel, state);
@@ -82,7 +106,6 @@ namespace Artemis.Plugins.SerialInput
                 if (!int.TryParse(kv[1], out int val)) continue;
                 val = Math.Clamp(val, 0, 1023);
 
-                // Reflectively set DataModel.AX
                 PropertyInfo? prop = typeof(ArduinoPinsDataModel).GetProperty($"A{index}");
                 if (prop != null)
                     prop.SetValue(DataModel, val);
@@ -100,8 +123,7 @@ namespace Artemis.Plugins.SerialInput
                     NewLine = "\n"
                 };
                 _serial.Open();
-
-                _logger?.Information($"Opened serial port {_comPortSetting.Value} at {_baudRateSetting.Value} baud for {_boardSetting.Value}");
+                _logger?.Information($"Opened serial port {_comPortSetting.Value} at {_baudRateSetting.Value} baud");
             }
             catch (Exception e)
             {
@@ -124,6 +146,8 @@ namespace Artemis.Plugins.SerialInput
             finally
             {
                 _serial = null;
+                _handshakeDone = false;
+                _boardType = null;
             }
         }
 
