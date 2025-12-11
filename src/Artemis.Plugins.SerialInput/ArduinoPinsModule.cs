@@ -16,6 +16,7 @@ namespace Artemis.Plugins.SerialInput
         private SerialPort? _serial;
         private bool _handshakeDone = false;
         private string? _boardType;
+        private double _elapsedSinceLastRequest = 0;
 
         public ArduinoPinsModule(PluginSettings pluginSettings, ILogger logger)
         {
@@ -52,23 +53,33 @@ namespace Artemis.Plugins.SerialInput
                     string response = _serial.ReadLine().Trim();
                     if (response == "Uno" || response == "Mega")
                     {
-                        _boardType = response;   // auto‑detected
+                        _boardType = response;
                         _handshakeDone = true;
+                        _elapsedSinceLastRequest = 0;
                     }
                     return;
                 }
 
                 if (_handshakeDone)
                 {
-                    // Each frame, request new batch
-                    _serial.Write(new byte[] { 0x02 }, 0, 1);
+                    _elapsedSinceLastRequest += deltaTime;
 
-                    string line = _serial.ReadLine().Trim();
-                    var blocks = line.Split(';', StringSplitOptions.RemoveEmptyEntries);
-                    foreach (var block in blocks)
+                    // Only send request once per second
+                    if (_elapsedSinceLastRequest >= 1.0)
                     {
-                        if (block.StartsWith("D:")) ParseDigital(block.Substring(2));
-                        else if (block.StartsWith("A:")) ParseAnalog(block.Substring(2));
+                        _serial.Write(new byte[] { 0x02 }, 0, 1);
+                        _elapsedSinceLastRequest = 0;
+                    }
+
+                    if (_serial.BytesToRead > 0)
+                    {
+                        string line = _serial.ReadLine().Trim();
+                        var blocks = line.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var block in blocks)
+                        {
+                            if (block.StartsWith("D:")) ParseDigital(block.Substring(2));
+                            else if (block.StartsWith("A:")) ParseAnalog(block.Substring(2));
+                        }
                     }
                 }
             }
@@ -87,7 +98,6 @@ namespace Artemis.Plugins.SerialInput
                 if (!int.TryParse(kv[0], out int pin)) continue;
                 bool state = kv[1] == "1";
 
-                // Skip pins 0 and 1
                 if (pin == 0 || pin == 1) continue;
 
                 PropertyInfo? prop = typeof(ArduinoPinsDataModel).GetProperty($"Pin{pin}");
