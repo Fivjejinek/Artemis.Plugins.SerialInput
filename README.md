@@ -6,4 +6,4 @@ A plugin for Artemis RGB Control that lets you take pin states on an Arduino and
 
 Works with Arduino Uno and Mega
 
-Download here: https://workshop.artemis-rgb.com/entries/428/arduino-pin-states
+Download here: https://workshop.artemis-rgb.com/entries/428/arduino-pin-states or from the Artemis Workshop
