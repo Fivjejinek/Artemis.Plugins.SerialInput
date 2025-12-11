@@ -14,7 +14,7 @@
 
     <StackPanel Orientation="Horizontal" Spacing="10">
       <TextBlock Text="Baud Rate:" Width="100" VerticalAlignment="Center"/>
-      <NumericUpDown Value="{Binding BaudRate.Value}" Minimum="1200" Maximum="115200" Increment="600" Width="200"/>
+      <NumericUpDown Value="{Binding BaudRate.Value}" Minimum="1200" Maximum="1000000" Increment="600" Width="200"/>
     </StackPanel>
   </StackPanel>
 </UserControl>
