@@ -17,6 +17,7 @@ namespace Artemis.Plugins.SerialInput
         private bool _handshakeDone = false;
         private string? _boardType;
         private double _elapsedSinceLastRequest = 0;
+        private int _missedResponses = 0;
 
         public ArduinoPinsModule(PluginSettings pluginSettings, ILogger logger)
         {
@@ -33,11 +34,6 @@ namespace Artemis.Plugins.SerialInput
         public override void Enable()
         {
             OpenSerial();
-            if (_serial != null && _serial.IsOpen)
-            {
-                // Ask "who are you"
-                _serial.Write(new byte[] { 0x01 }, 0, 1);
-            }
         }
 
         public override void Disable() => CloseSerialIfOpen();
@@ -48,38 +44,57 @@ namespace Artemis.Plugins.SerialInput
 
             try
             {
-                if (!_handshakeDone && _serial.BytesToRead > 0)
+                _elapsedSinceLastRequest += deltaTime;
+
+                if (!_handshakeDone)
                 {
-                    string response = _serial.ReadLine().Trim();
-                    if (response == "Uno" || response == "Mega")
+                    // Send 0x01 every second until Arduino replies
+                    if (_elapsedSinceLastRequest >= 1.0)
                     {
-                        _boardType = response;
-                        _handshakeDone = true;
+                        _serial.Write(new byte[] { 0x01 }, 0, 1);
                         _elapsedSinceLastRequest = 0;
+                    }
+
+                    if (_serial.BytesToRead > 0)
+                    {
+                        string response = _serial.ReadLine().Trim();
+                        if (response == "Uno" || response == "Mega")
+                        {
+                            _boardType = response;
+                            _handshakeDone = true;
+                            _missedResponses = 0;
+                        }
                     }
                     return;
                 }
 
-                if (_handshakeDone)
+                // Handshake done: send 0x02 once per second
+                if (_elapsedSinceLastRequest >= 1.0)
                 {
-                    _elapsedSinceLastRequest += deltaTime;
+                    _serial.Write(new byte[] { 0x02 }, 0, 1);
+                    _elapsedSinceLastRequest = 0;
+                }
 
-                    // Only send request once per second
-                    if (_elapsedSinceLastRequest >= 1.0)
+                if (_serial.BytesToRead > 0)
+                {
+                    string line = _serial.ReadLine().Trim();
+                    var blocks = line.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var block in blocks)
                     {
-                        _serial.Write(new byte[] { 0x02 }, 0, 1);
-                        _elapsedSinceLastRequest = 0;
+                        if (block.StartsWith("D:")) ParseDigital(block.Substring(2));
+                        else if (block.StartsWith("A:")) ParseAnalog(block.Substring(2));
                     }
-
-                    while (_serial.BytesToRead > 0)
+                    _missedResponses = 0; // reset on valid response
+                }
+                else
+                {
+                    _missedResponses++;
+                    if (_missedResponses >= 10)
                     {
-                        string line = _serial.ReadLine().Trim();
-                        var blocks = line.Split(';', StringSplitOptions.RemoveEmptyEntries);
-                        foreach (var block in blocks)
-                        {
-                            if (block.StartsWith("D:")) ParseDigital(block.Substring(2));
-                            else if (block.StartsWith("A:")) ParseAnalog(block.Substring(2));
-                        }
+                        // Reset handshake
+                        _handshakeDone = false;
+                        _boardType = null;
+                        _missedResponses = 0;
                     }
                 }
             }
@@ -158,6 +173,7 @@ namespace Artemis.Plugins.SerialInput
                 _serial = null;
                 _handshakeDone = false;
                 _boardType = null;
+                _missedResponses = 0;
             }
         }
 
