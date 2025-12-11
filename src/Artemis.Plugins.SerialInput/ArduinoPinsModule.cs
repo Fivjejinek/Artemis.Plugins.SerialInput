@@ -71,7 +71,7 @@ namespace Artemis.Plugins.SerialInput
                         _elapsedSinceLastRequest = 0;
                     }
 
-                    if (_serial.BytesToRead > 0)
+                    while (_serial.BytesToRead > 0)
                     {
                         string line = _serial.ReadLine().Trim();
                         var blocks = line.Split(';', StringSplitOptions.RemoveEmptyEntries);
