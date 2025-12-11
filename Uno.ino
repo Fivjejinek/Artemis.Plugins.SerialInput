@@ -9,9 +9,9 @@ void loop() {
   while (Serial.available() > 0) {
     int code = Serial.read();
 
-    if (!identified && code == 0x01) {
+    if (code == 0x01) {
       Serial.println("Uno");
-      identified = true;
+      identified = true; // allow re-identification
     }
     else if (identified && code == 0x02) {
       Serial.print("D:");
