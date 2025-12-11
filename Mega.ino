@@ -6,7 +6,7 @@ void setup() {
 bool identified = false;
 
 void loop() {
-  if (Serial.available()) {
+  while (Serial.available() > 0) {
     int code = Serial.read();
 
     if (!identified && code == 0x01) {
@@ -34,7 +34,7 @@ void loop() {
         if (i < 15) Serial.print(',');
       }
 
-      Serial.println();
+      Serial.println(); // newline terminator
     }
   }
 }
