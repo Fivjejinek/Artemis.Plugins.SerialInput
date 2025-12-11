@@ -23,9 +23,9 @@ namespace Artemis.Plugins.SerialInput
         public ArduinoPinsModule(PluginSettings pluginSettings, ILogger logger)
         {
             _logger = logger;
-            _comPortSetting = pluginSettings.GetSetting("ComPort", "COM3");
-            _baudRateSetting = pluginSettings.GetSetting("BaudRate", 9600);
-            _updateRateSetting = pluginSettings.GetSetting("UpdateRate", 1.0); // seconds
+            _comPortSetting = pluginSettings.GetSetting("ComPort", "COM11");      // default COM11
+            _baudRateSetting = pluginSettings.GetSetting("BaudRate", 115200);     // default 115200
+            _updateRateSetting = pluginSettings.GetSetting("UpdateRate", 0.1);    // default 0.1s
 
             _comPortSetting.PropertyChanged += (_, __) => RestartSerial();
             _baudRateSetting.PropertyChanged += (_, __) => RestartSerial();
@@ -51,7 +51,6 @@ namespace Artemis.Plugins.SerialInput
 
                 if (!_handshakeDone)
                 {
-                    // Send 0x01 every update interval until Arduino replies
                     if (_elapsedSinceLastRequest >= _updateRateSetting.Value)
                     {
                         _serial.Write(new byte[] { 0x01 }, 0, 1);
@@ -71,7 +70,6 @@ namespace Artemis.Plugins.SerialInput
                     return;
                 }
 
-                // Handshake done: send 0x02 every update interval
                 if (_elapsedSinceLastRequest >= _updateRateSetting.Value)
                 {
                     _serial.Write(new byte[] { 0x02 }, 0, 1);
@@ -87,14 +85,13 @@ namespace Artemis.Plugins.SerialInput
                         if (block.StartsWith("D:")) ParseDigital(block.Substring(2));
                         else if (block.StartsWith("A:")) ParseAnalog(block.Substring(2));
                     }
-                    _missedResponses = 0; // reset on valid response
+                    _missedResponses = 0;
                 }
                 else
                 {
                     _missedResponses++;
                     if (_missedResponses >= 10)
                     {
-                        // Reset handshake
                         _handshakeDone = false;
                         _boardType = null;
                         _missedResponses = 0;
@@ -145,7 +142,7 @@ namespace Artemis.Plugins.SerialInput
             try
             {
                 CloseSerialIfOpen();
-                _serial = new SerialPort(_comPortSetting.Value ?? "COM3", _baudRateSetting.Value)
+                _serial = new SerialPort(_comPortSetting.Value ?? "COM11", _baudRateSetting.Value)
                 {
                     ReadTimeout = 500,
                     NewLine = "\n"
