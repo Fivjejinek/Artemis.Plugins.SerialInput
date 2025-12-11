@@ -1,12 +1,12 @@
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   while (!Serial) { }
 }
 
 bool identified = false;
 
 void loop() {
-  if (Serial.available()) {
+  while (Serial.available() > 0) {
     int code = Serial.read();
 
     if (!identified && code == 0x01) {
@@ -34,7 +34,7 @@ void loop() {
         if (i < 5) Serial.print(',');
       }
 
-      Serial.println();
+      Serial.println(); // newline terminator
     }
   }
 }
