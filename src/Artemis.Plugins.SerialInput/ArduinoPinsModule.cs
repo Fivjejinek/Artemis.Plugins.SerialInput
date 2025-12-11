@@ -12,6 +12,7 @@ namespace Artemis.Plugins.SerialInput
     {
         private readonly PluginSetting<string> _comPortSetting;
         private readonly PluginSetting<int> _baudRateSetting;
+        private readonly PluginSetting<double> _updateRateSetting;
         private readonly ILogger _logger;
         private SerialPort? _serial;
         private bool _handshakeDone = false;
@@ -24,9 +25,11 @@ namespace Artemis.Plugins.SerialInput
             _logger = logger;
             _comPortSetting = pluginSettings.GetSetting("ComPort", "COM3");
             _baudRateSetting = pluginSettings.GetSetting("BaudRate", 9600);
+            _updateRateSetting = pluginSettings.GetSetting("UpdateRate", 1.0); // seconds
 
             _comPortSetting.PropertyChanged += (_, __) => RestartSerial();
             _baudRateSetting.PropertyChanged += (_, __) => RestartSerial();
+            _updateRateSetting.PropertyChanged += (_, __) => { _elapsedSinceLastRequest = 0; };
         }
 
         public override List<IModuleActivationRequirement> ActivationRequirements => new();
@@ -48,8 +51,8 @@ namespace Artemis.Plugins.SerialInput
 
                 if (!_handshakeDone)
                 {
-                    // Send 0x01 every second until Arduino replies
-                    if (_elapsedSinceLastRequest >= 1.0)
+                    // Send 0x01 every update interval until Arduino replies
+                    if (_elapsedSinceLastRequest >= _updateRateSetting.Value)
                     {
                         _serial.Write(new byte[] { 0x01 }, 0, 1);
                         _elapsedSinceLastRequest = 0;
@@ -68,8 +71,8 @@ namespace Artemis.Plugins.SerialInput
                     return;
                 }
 
-                // Handshake done: send 0x02 once per second
-                if (_elapsedSinceLastRequest >= 1.0)
+                // Handshake done: send 0x02 every update interval
+                if (_elapsedSinceLastRequest >= _updateRateSetting.Value)
                 {
                     _serial.Write(new byte[] { 0x02 }, 0, 1);
                     _elapsedSinceLastRequest = 0;
