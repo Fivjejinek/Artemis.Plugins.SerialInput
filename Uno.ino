@@ -14,9 +14,8 @@ void loop() {
       identified = true;
     }
     else if (identified && code == 0x02) {
-      // Send one batch of pin states
       Serial.print("D:");
-      for (int p = 2; p <= 13; p++) { // skip 0 and 1
+      for (int p = 2; p <= 13; p++) {
         int v = digitalRead(p);
         Serial.print(p);
         Serial.print('=');
