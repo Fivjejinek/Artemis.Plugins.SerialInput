@@ -11,7 +11,7 @@ void loop() {
 
     if (code == 0x01) {
       Serial.println("Uno");
-      identified = true; // allow re-identification
+      identified = true; // allow re-identification anytime
     }
     else if (identified && code == 0x02) {
       Serial.print("D:");
