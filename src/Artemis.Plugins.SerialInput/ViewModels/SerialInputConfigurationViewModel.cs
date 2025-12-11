@@ -12,9 +12,10 @@ namespace Artemis.Plugins.SerialInput.ViewModels
         public SerialInputConfigurationViewModel(Plugin plugin, PluginSettings settings)
             : base(plugin)
         {
-            ComPort = settings.GetSetting("ComPort", "COM11");       // default COM11
-            BaudRate = settings.GetSetting("BaudRate", 115200);      // default 115200
-            UpdateRate = settings.GetSetting("UpdateRate", 0.1);     // default 0.1s
+            // No defaults: start empty and require user input
+            ComPort = settings.GetSetting("ComPort", string.Empty);
+            BaudRate = settings.GetSetting("BaudRate", 0);
+            UpdateRate = settings.GetSetting("UpdateRate", 0.0);
         }
     }
 }
