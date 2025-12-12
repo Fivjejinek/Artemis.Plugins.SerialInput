@@ -8,7 +8,9 @@ struct PinConfig {
   const char* type; // "None", "Switch", "Button", "Dial"
 };
 
-// Digital pins: all None by default
+// --------------------
+// Digital pin configs
+// --------------------
 PinConfig digitalPins[] = {
   {2, "None"}, {3, "None"}, {4, "None"}, {5, "None"}, {6, "None"},
   {7, "None"}, {8, "None"}, {9, "None"}, {10, "None"}, {11, "None"},
@@ -25,7 +27,9 @@ PinConfig digitalPins[] = {
 #endif
 };
 
-// Analog pins: all None by default
+// --------------------
+// Analog pin configs
+// --------------------
 PinConfig analogPins[] = {
   {0, "None"}, {1, "None"}, {2, "None"}, {3, "None"}, {4, "None"}, {5, "None"},
 #if defined(__AVR_ATmega2560__)
@@ -34,6 +38,9 @@ PinConfig analogPins[] = {
 #endif
 };
 
+// --------------------
+// State caches
+// --------------------
 bool lastDigital[54];
 int  lastAnalog[16];
 unsigned long lastHeartbeat = 0;
@@ -41,12 +48,15 @@ unsigned long lastHeartbeat = 0;
 void setup() {
   Serial.begin(115200);
 
+  // Initialize digital pins
   for (auto &cfg : digitalPins) {
     if (strcmp(cfg.type, "None") != 0) {
       pinMode(cfg.pin, INPUT_PULLUP);
       lastDigital[cfg.pin] = digitalRead(cfg.pin);
     }
   }
+
+  // Initialize analog pins
   for (auto &cfg : analogPins) {
     if (strcmp(cfg.type, "Dial") == 0) {
       lastAnalog[cfg.pin] = analogRead(cfg.pin);
@@ -65,10 +75,10 @@ void loop() {
       Serial.println("Uno");
 #endif
     }
-    // Artemis sends 0x02 after frames; we can ignore or use it to confirm
+    // Artemis sends 0x02 after frames; Arduino ignores
   }
 
-  // Check digital pins
+  // Build frame if changes
   String frame = "";
   bool anyDigital = false;
   frame += "D:";
@@ -84,13 +94,12 @@ void loop() {
     }
   }
 
-  // Check analog pins
   bool anyAnalog = false;
   frame += ";A:";
   for (auto &cfg : analogPins) {
     if (strcmp(cfg.type, "Dial") == 0) {
       int val = analogRead(cfg.pin);
-      if (abs(val - lastAnalog[cfg.pin]) > 2) {
+      if (abs(val - lastAnalog[cfg.pin]) > 2) { // threshold
         if (anyAnalog) frame += ",";
         frame += String(cfg.pin) + "=" + val;
         lastAnalog[cfg.pin] = val;
