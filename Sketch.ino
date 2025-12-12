@@ -1,7 +1,8 @@
-// Unified Arduino Uno/Mega sketch for Artemis push protocol
-// Handshake: replies "Uno"/"Mega" on 0x01
-// Pushes pin changes immediately, expects 0x02 from Artemis
-// Sends heartbeat 0x03 every 10s
+// Arduino Uno/Mega sketch for Artemis
+// Handshake: replies "Uno" or "Mega" on 0x01
+// Reports pin changes automatically (no 0x02 required)
+// Heartbeat: sends raw 0x03 every 10s
+// Analog pins A0, A1, A2 configured as dials with frame averaging
 
 struct PinConfig {
   uint8_t pin;
@@ -31,7 +32,10 @@ PinConfig digitalPins[] = {
 // Analog pin configs
 // --------------------
 PinConfig analogPins[] = {
-  {0, "None"}, {1, "None"}, {2, "None"}, {3, "None"}, {4, "None"}, {5, "None"},
+  {0, "None"}, // A0
+  {1, "None"}, // A1
+  {2, "None"}, // A2
+  {3, "None"}, {4, "None"}, {5, "None"},
 #if defined(__AVR_ATmega2560__)
   {6, "None"}, {7, "None"}, {8, "None"}, {9, "None"}, {10, "None"},
   {11, "None"}, {12, "None"}, {13, "None"}, {14, "None"}, {15, "None"},
@@ -45,12 +49,19 @@ bool lastDigital[54];
 int  lastAnalog[16];
 unsigned long lastHeartbeat = 0;
 
+// --------------------
+// Frame averaging
+// --------------------
+const int avgFrames = 64; // configurable number of frames to average (default 4)
+int analogSums[16];      // running sum of samples
+int analogCounts[16];    // count of frames accumulated
+
 void setup() {
   Serial.begin(115200);
 
   // Initialize digital pins
   for (auto &cfg : digitalPins) {
-    if (strcmp(cfg.type, "None") != 0) {
+    if (strcmp(cfg.type, "Switch") == 0 || strcmp(cfg.type, "Button") == 0) {
       pinMode(cfg.pin, INPUT_PULLUP);
       lastDigital[cfg.pin] = digitalRead(cfg.pin);
     }
@@ -59,7 +70,10 @@ void setup() {
   // Initialize analog pins
   for (auto &cfg : analogPins) {
     if (strcmp(cfg.type, "Dial") == 0) {
-      lastAnalog[cfg.pin] = analogRead(cfg.pin);
+      int val = analogRead(cfg.pin);
+      lastAnalog[cfg.pin] = val;
+      analogSums[cfg.pin] = val;
+      analogCounts[cfg.pin] = 1;
     }
   }
 }
@@ -75,15 +89,16 @@ void loop() {
       Serial.println("Uno");
 #endif
     }
-    // Artemis sends 0x02 after frames; Arduino ignores
   }
 
-  // Build frame if changes
+  // Build frame of changed pins automatically
   String frame = "";
+
+  // Digital first
   bool anyDigital = false;
   frame += "D:";
   for (auto &cfg : digitalPins) {
-    if (strcmp(cfg.type, "None") != 0) {
+    if (strcmp(cfg.type, "Switch") == 0 || strcmp(cfg.type, "Button") == 0) {
       bool state = digitalRead(cfg.pin);
       if (state != lastDigital[cfg.pin]) {
         if (anyDigital) frame += ",";
@@ -94,16 +109,26 @@ void loop() {
     }
   }
 
+  // Analog next with frame averaging
   bool anyAnalog = false;
   frame += ";A:";
   for (auto &cfg : analogPins) {
     if (strcmp(cfg.type, "Dial") == 0) {
-      int val = analogRead(cfg.pin);
-      if (abs(val - lastAnalog[cfg.pin]) > 2) { // threshold
-        if (anyAnalog) frame += ",";
-        frame += String(cfg.pin) + "=" + val;
-        lastAnalog[cfg.pin] = val;
-        anyAnalog = true;
+      int raw = analogRead(cfg.pin);
+      analogSums[cfg.pin] += raw;
+      analogCounts[cfg.pin]++;
+
+      if (analogCounts[cfg.pin] >= avgFrames) {
+        int avgVal = analogSums[cfg.pin] / analogCounts[cfg.pin];
+        analogSums[cfg.pin] = 0;
+        analogCounts[cfg.pin] = 0;
+
+        if (avgVal != lastAnalog[cfg.pin]) {
+          if (anyAnalog) frame += ",";
+          frame += String(cfg.pin) + "=" + avgVal;
+          lastAnalog[cfg.pin] = avgVal;
+          anyAnalog = true;
+        }
       }
     }
   }
@@ -114,7 +139,7 @@ void loop() {
 
   // Heartbeat every 10s
   if (millis() - lastHeartbeat >= 10000) {
-    Serial.write((uint8_t)0x03);   // send raw byte 0x03
+    Serial.write((uint8_t)0x03);   // raw heartbeat byte
     lastHeartbeat = millis();
   }
 }
