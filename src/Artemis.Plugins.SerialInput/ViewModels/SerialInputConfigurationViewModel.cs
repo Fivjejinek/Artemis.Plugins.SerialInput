@@ -1,17 +1,17 @@
 using Artemis.Core;
 using Artemis.Core.Modules;
 
-namespace Artemis.Plugins.SerialInput
+namespace Artemis.Plugins.SerialInput.ViewModels
 {
-    public class ArduinoPinsModuleViewModel : ModuleViewModel
+    public class SerialInputConfigurationViewModel : ModuleViewModel
     {
-        public PluginSetting<string> ComPortSetting { get; }
-        public PluginSetting<int> BaudRateSetting { get; }
+        public PluginSetting<string> ComPort { get; }
+        public PluginSetting<int> BaudRate { get; }
 
-        public ArduinoPinsModuleViewModel(ArduinoPinsModule module) : base(module)
+        public SerialInputConfigurationViewModel(ArduinoPinsModule module) : base(module)
         {
-            ComPortSetting = module.ComPortSetting;
-            BaudRateSetting = module.BaudRateSetting;
+            ComPort = module.ComPortSetting;
+            BaudRate = module.BaudRateSetting;
         }
     }
 }
