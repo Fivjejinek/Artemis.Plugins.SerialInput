@@ -1,6 +1,6 @@
 using Artemis.Core;
 using Artemis.Core.Modules;
-
+using Artemis.UI.Shared;
 namespace Artemis.Plugins.SerialInput.ViewModels
 {
     public class SerialInputConfigurationViewModel : ModuleViewModel
