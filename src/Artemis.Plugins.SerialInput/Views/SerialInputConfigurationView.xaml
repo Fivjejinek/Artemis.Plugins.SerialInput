@@ -7,23 +7,21 @@
   <StackPanel Margin="20" Spacing="10">
     <TextBlock Text="Serial Port Configuration" FontSize="18" FontWeight="Bold" />
 
+    <!-- COM Port -->
     <StackPanel Orientation="Horizontal" Spacing="10">
       <TextBlock Text="COM Port:" Width="150" VerticalAlignment="Center"/>
       <TextBox Text="{Binding ComPort.Value}" Width="200" Watermark="e.g. COM11"/>
     </StackPanel>
 
+    <!-- Baud Rate -->
     <StackPanel Orientation="Horizontal" Spacing="10">
       <TextBlock Text="Baud Rate:" Width="150" VerticalAlignment="Center"/>
       <NumericUpDown Value="{Binding BaudRate.Value}" Minimum="1" Maximum="1000000" Increment="600" Width="200"/>
     </StackPanel>
 
-    <StackPanel Orientation="Horizontal" Spacing="10">
-      <TextBlock Text="Update Rate (s):" Width="150" VerticalAlignment="Center"/>
-      <NumericUpDown Value="{Binding UpdateRate.Value}" Minimum="0.01" Maximum="10" Increment="0.05" Width="200"/>
-    </StackPanel>
-
+    <!-- Info text -->
     <TextBlock Margin="0,10,0,0"
-               Text="Set COM port, baud rate, and update rate. Plugin will remain idle until all values are valid."
+               Text="Set COM port and baud rate. Plugin will remain idle until both values are valid."
                Opacity="0.7"/>
   </StackPanel>
 </UserControl>
