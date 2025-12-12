@@ -62,7 +62,7 @@ namespace Artemis.Plugins.SerialInput
 
             try
             {
-                // Handshake phase
+                // Handshake phase: keep sending until we get a valid response
                 if (!_handshakeDone)
                 {
                     _serial.Write(new byte[] { 0x01 }, 0, 1);
