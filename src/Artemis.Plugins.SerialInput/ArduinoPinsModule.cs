@@ -13,19 +13,17 @@ namespace Artemis.Plugins.SerialInput
     {
         private readonly PluginSetting<string> _comPortSetting;
         private readonly PluginSetting<int> _baudRateSetting;
-        private readonly PluginSetting<double> _updateRateSetting;
         private readonly ILogger _logger;
 
         private SerialPort? _serial;
         private bool _handshakeDone = false;
         private string? _boardType;
-        private double _elapsedSinceLastRequest = 0;
         private int _missedResponses = 0;
 
-        // Buffered read
+        private DateTimeOffset _lastMessageTime = DateTimeOffset.MinValue;
+
         private readonly StringBuilder _rxBuffer = new StringBuilder(1024);
 
-        // Cached properties for fast updates
         private readonly Dictionary<int, PropertyInfo> _digitalProps = new();
         private readonly Dictionary<int, PropertyInfo> _analogProps = new();
 
@@ -33,30 +31,23 @@ namespace Artemis.Plugins.SerialInput
         {
             _logger = logger;
 
-            // No defaults: require user to set values in UI/settings
             _comPortSetting = pluginSettings.GetSetting("ComPort", string.Empty);
             _baudRateSetting = pluginSettings.GetSetting("BaudRate", 0);
-            _updateRateSetting = pluginSettings.GetSetting("UpdateRate", 0.0);
 
             _comPortSetting.PropertyChanged += (_, __) => RestartSerial();
             _baudRateSetting.PropertyChanged += (_, __) => RestartSerial();
-            _updateRateSetting.PropertyChanged += (_, __) => { _elapsedSinceLastRequest = 0; };
 
-            CacheProperties(); // cache once
+            CacheProperties();
         }
 
         public override List<IModuleActivationRequirement> ActivationRequirements => new();
 
-        public override void Enable()
-        {
-            OpenSerial();
-        }
+        public override void Enable() => OpenSerial();
 
         public override void Disable() => CloseSerialIfOpen();
 
         public override void Update(double deltaTime)
         {
-            // Validate settings before doing anything
             if (!AreSettingsValid())
             {
                 DataModel.IsConnected = false;
@@ -71,26 +62,10 @@ namespace Artemis.Plugins.SerialInput
 
             try
             {
-                _elapsedSinceLastRequest += deltaTime;
-
-                // Effective clamped rate only if user provided a positive value
-                double rate = _updateRateSetting.Value;
-                if (rate <= 0)
-                {
-                    // If no rate is provided, do not send requests
-                    return;
-                }
-                rate = Math.Clamp(rate, 0.05, 10.0);
-
-                // Handshake phase: send 0x01 until we receive board ID
+                // Handshake phase
                 if (!_handshakeDone)
                 {
-                    if (_elapsedSinceLastRequest >= rate)
-                    {
-                        _serial.Write(new byte[] { 0x01 }, 0, 1);
-                        _elapsedSinceLastRequest = 0;
-                    }
-
+                    _serial.Write(new byte[] { 0x01 }, 0, 1);
                     ReadIntoBuffer();
                     if (TryConsumeLine(out string line))
                     {
@@ -102,50 +77,40 @@ namespace Artemis.Plugins.SerialInput
                             _missedResponses = 0;
                             DataModel.BoardType = _boardType ?? "";
                             DataModel.IsConnected = true;
+                            _lastMessageTime = DateTimeOffset.UtcNow;
                         }
                     }
                     return;
                 }
 
-                // Identified: send 0x02 periodically
-                if (_elapsedSinceLastRequest >= rate)
-                {
-                    _serial.Write(new byte[] { 0x02 }, 0, 1);
-                    _elapsedSinceLastRequest = 0;
-                }
-
-                // Non-blocking read and parse
+                // Read incoming frames
                 ReadIntoBuffer();
 
-                bool receivedAnyFrame = false;
                 while (TryConsumeLine(out string frame))
                 {
-                    receivedAnyFrame = true;
-                    ParseFrame(frame);
-                    _missedResponses = 0;
-                    DataModel.IsConnected = true;
-                    DataModel.LastUpdated = DateTimeOffset.UtcNow;
-                }
+                    _lastMessageTime = DateTimeOffset.UtcNow;
 
-                if (!receivedAnyFrame)
-                {
-                    _missedResponses++;
-                    if (_missedResponses >= 10)
+                    // Heartbeat check: raw 0x03
+                    if (frame.Length == 1 && frame[0] == (char)0x03)
                     {
-                        // Reset handshake on consecutive misses
-                        _handshakeDone = false;
-                        _boardType = null;
-                        DataModel.BoardType = "";
-                        DataModel.IsConnected = false;
-                        _missedResponses = 0;
-                        _logger?.Warning("No responses to 0x02 for 10 intervals, resetting handshake.");
+                        DataModel.IsConnected = true;
+                    }
+                    else
+                    {
+                        ParseFrame(frame);
+                        DataModel.IsConnected = true;
+                        DataModel.LastUpdated = DateTimeOffset.UtcNow;
+
+                        // Send acknowledgment 0x02
+                        _serial.Write(new byte[] { 0x02 }, 0, 1);
                     }
                 }
-            }
-            catch (TimeoutException)
-            {
-                // Treat timeout as a missed response, not a fatal error
-                _missedResponses++;
+
+                // Timeout: if no message for 15s, mark disconnected
+                if ((DateTimeOffset.UtcNow - _lastMessageTime).TotalSeconds > 15)
+                {
+                    DataModel.IsConnected = false;
+                }
             }
             catch (Exception e)
             {
@@ -159,7 +124,6 @@ namespace Artemis.Plugins.SerialInput
                 return false;
             if (_baudRateSetting.Value <= 0)
                 return false;
-            // UpdateRate can be validated in Update; no need to block here
             return true;
         }
 
@@ -167,7 +131,7 @@ namespace Artemis.Plugins.SerialInput
         {
             var type = typeof(ArduinoPinsDataModel);
 
-            // Digital pins Pin2..Pin53 (will only be used for existing properties)
+            // Digital pins Pin2..Pin53
             for (int p = 2; p <= 53; p++)
             {
                 var prop = type.GetProperty($"Pin{p}");
@@ -182,13 +146,10 @@ namespace Artemis.Plugins.SerialInput
                 if (prop != null)
                     _analogProps[a] = prop;
             }
-
-            // Status props exist directly on the data model; no caching needed
         }
 
         private void ParseFrame(string line)
         {
-            // Expect "D:pin=state,...;A:index=value,..."
             var blocks = line.Split(';', StringSplitOptions.RemoveEmptyEntries);
             foreach (var block in blocks)
             {
@@ -201,7 +162,6 @@ namespace Artemis.Plugins.SerialInput
 
         private void ParseDigital(ReadOnlySpan<char> csv)
         {
-            // csv like "2=1,3=0,4=1"
             int start = 0;
             while (start < csv.Length)
             {
@@ -272,7 +232,7 @@ namespace Artemis.Plugins.SerialInput
             }
             catch (TimeoutException)
             {
-                // ignore; handled as missed response in Update
+                // ignore
             }
         }
 
@@ -283,13 +243,20 @@ namespace Artemis.Plugins.SerialInput
             {
                 if (_rxBuffer[i] == '\n')
                 {
-                    // Extract line up to '\n'
                     line = _rxBuffer.ToString(0, i).TrimEnd('\r');
-                    // Remove consumed segment including '\n'
                     _rxBuffer.Remove(0, i + 1);
                     return true;
                 }
             }
+
+            // Special case: heartbeat 0x03 (single char, no newline)
+            if (_rxBuffer.Length == 1 && _rxBuffer[0] == (char)0x03)
+            {
+                line = _rxBuffer.ToString();
+                _rxBuffer.Clear();
+                return true;
+            }
+
             return false;
         }
 
@@ -301,13 +268,13 @@ namespace Artemis.Plugins.SerialInput
 
                 if (!AreSettingsValid())
                 {
-                    _logger?.Warning("Serial settings invalid. Please set COM port, baud rate, and update rate.");
+                    _logger?.Warning("Serial settings invalid. Please set COM port and baud rate.");
                     return;
                 }
 
                 _serial = new SerialPort(_comPortSetting.Value!, _baudRateSetting.Value)
                 {
-                    ReadTimeout = 200, // shorter timeout to keep loop responsive
+                    ReadTimeout = 200,
                     NewLine = "\n"
                 };
                 _serial.Open();
