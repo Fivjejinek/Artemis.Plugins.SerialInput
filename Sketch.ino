@@ -1,7 +1,7 @@
 // Unified Arduino Uno/Mega sketch for Artemis push protocol
 // Handshake: replies "Uno"/"Mega" on 0x01
 // Pushes pin changes immediately, expects 0x02 from Artemis
-// Sends heartbeat "ping" every 10s
+// Sends heartbeat 0x03 every 10s
 
 struct PinConfig {
   uint8_t pin;
@@ -105,7 +105,7 @@ void loop() {
 
   // Heartbeat every 10s
   if (millis() - lastHeartbeat >= 10000) {
-    Serial.println("ping");
+    Serial.write((uint8_t)0x03);   // send raw byte 0x03
     lastHeartbeat = millis();
   }
 }
