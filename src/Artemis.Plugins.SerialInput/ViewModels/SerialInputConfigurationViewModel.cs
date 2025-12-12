@@ -8,10 +8,11 @@ namespace Artemis.Plugins.SerialInput.ViewModels
         public PluginSetting<string> ComPort { get; }
         public PluginSetting<int> BaudRate { get; }
 
-        public SerialInputConfigurationViewModel(ArduinoPinsModule module) : base(module)
+        public SerialInputConfigurationViewModel(Plugin plugin, PluginSettings settings)
+            : base(plugin)
         {
-            ComPort = module.ComPortSetting;
-            BaudRate = module.BaudRateSetting;
+            ComPort = settings.GetSetting("ComPort", string.Empty);
+            BaudRate = settings.GetSetting("BaudRate", 0);
         }
     }
 }
