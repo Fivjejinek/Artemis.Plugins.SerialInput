@@ -18,9 +18,9 @@ namespace Artemis.Plugins.SerialInput
         private SerialPort? _serial;
         private bool _handshakeDone = false;
         private string? _boardType;
-        private int _missedResponses = 0;
 
         private DateTimeOffset _lastMessageTime = DateTimeOffset.MinValue;
+        private DateTimeOffset _lastHandshakeAttempt = DateTimeOffset.MinValue;
 
         private readonly StringBuilder _rxBuffer = new StringBuilder(1024);
 
@@ -62,10 +62,15 @@ namespace Artemis.Plugins.SerialInput
 
             try
             {
-                // Handshake phase: keep sending until we get a valid response
+                // Handshake phase: retry every 1 second until success
                 if (!_handshakeDone)
                 {
-                    _serial.Write(new byte[] { 0x01 }, 0, 1);
+                    if ((DateTimeOffset.UtcNow - _lastHandshakeAttempt).TotalSeconds >= 1)
+                    {
+                        _serial.Write(new byte[] { 0x01 }, 0, 1);
+                        _lastHandshakeAttempt = DateTimeOffset.UtcNow;
+                    }
+
                     ReadIntoBuffer();
                     if (TryConsumeLine(out string line))
                     {
@@ -74,8 +79,7 @@ namespace Artemis.Plugins.SerialInput
                         {
                             _boardType = response;
                             _handshakeDone = true;
-                            _missedResponses = 0;
-                            DataModel.BoardType = _boardType ?? "";
+                            DataModel.BoardType = _boardType;
                             DataModel.IsConnected = true;
                             _lastMessageTime = DateTimeOffset.UtcNow;
                         }
@@ -83,16 +87,15 @@ namespace Artemis.Plugins.SerialInput
                     return;
                 }
 
-                // Read incoming frames
+                // Normal frame processing (no 0x02 acknowledgment)
                 ReadIntoBuffer();
-
                 while (TryConsumeLine(out string frame))
                 {
                     _lastMessageTime = DateTimeOffset.UtcNow;
 
-                    // Heartbeat check: raw 0x03
                     if (frame.Length == 1 && frame[0] == (char)0x03)
                     {
+                        // Heartbeat
                         DataModel.IsConnected = true;
                     }
                     else
@@ -100,17 +103,12 @@ namespace Artemis.Plugins.SerialInput
                         ParseFrame(frame);
                         DataModel.IsConnected = true;
                         DataModel.LastUpdated = DateTimeOffset.UtcNow;
-
-                        // Send acknowledgment 0x02
-                        _serial.Write(new byte[] { 0x02 }, 0, 1);
                     }
                 }
 
-                // Timeout: if no message for 15s, mark disconnected
+                // Timeout if no message for 15s
                 if ((DateTimeOffset.UtcNow - _lastMessageTime).TotalSeconds > 15)
-                {
                     DataModel.IsConnected = false;
-                }
             }
             catch (Exception e)
             {
@@ -281,8 +279,8 @@ namespace Artemis.Plugins.SerialInput
 
                 _handshakeDone = false;
                 _boardType = null;
-                _missedResponses = 0;
                 _rxBuffer.Clear();
+                _lastHandshakeAttempt = DateTimeOffset.MinValue;
 
                 _logger?.Information($"Serial opened on {_comPortSetting.Value} at {_baudRateSetting.Value} baud.");
             }
@@ -309,7 +307,6 @@ namespace Artemis.Plugins.SerialInput
                 _serial = null;
                 _handshakeDone = false;
                 _boardType = null;
-                _missedResponses = 0;
                 _rxBuffer.Clear();
 
                 DataModel.IsConnected = false;
