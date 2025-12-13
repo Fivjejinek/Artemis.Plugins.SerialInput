@@ -6,7 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ArtemisRGB.Core" IncludeAssets="compile;build;buildTransitive" Version="*" />
     <PackageReference Include="ArtemisRGB.UI.Shared" IncludeAssets="compile;build;buildTransitive" Version="*" />
     <PackageReference Include="Serilog" Version="4.*" />
     <PackageReference Include="System.IO.Ports" Version="7.0.0" />
